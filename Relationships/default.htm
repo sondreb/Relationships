@@ -1,0 +1,223 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Visualize Your Friends' Relationships</title>
+    
+    <link href='http://fonts.googleapis.com/css?family=Duru+Sans' rel='stylesheet' type='text/css'>
+    <script src="jquery-1.8.1.min.js"></script>
+    <script src="//connect.facebook.net/en_US/all.js"></script>
+
+    <style>
+
+        body {
+            font-family: 'Duru Sans', sans-serif;
+            font-size: 1.2em;
+            padding-top: 20px;
+            padding-left: 50px;
+            padding-right: 50px;
+        }
+
+        .authenticated {
+            display: none;
+        }
+
+        .anonymous {
+        }
+
+        #connect {
+
+            cursor: pointer;
+
+        }
+
+        #profileImage {
+            float: left;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        #relationships span {
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+    </style>
+
+    <script>
+
+        // Onload event handler
+        $(function () {
+
+            console.log("Onload...");
+            $("#connect").click(function (event) {
+
+                FB.login(function (response) {
+                    //console.log(response);
+                }, { scope: 'user_relationships,friends_relationships' });
+
+            });
+
+        });
+
+        function ChangeState(authenticated)
+        {
+            if (authenticated)
+            {
+                $(".anonymous").hide();
+                $(".authenticated").show();
+            }
+            else
+            {
+                $(".anonymous").show();
+                $(".authenticated").hide();
+            }
+        }
+
+        function Logout()
+        {
+            FB.logout();
+        }
+
+        window.fbAsyncInit = function () {
+
+            var fbAppId = "408049315911582";
+
+            FB.init({
+                appId: fbAppId,
+                status: true,
+                cookie: false,
+                xfbml: false,
+                oauth: true
+            });
+
+            // listen for and handle auth.statusChange events
+            FB.Event.subscribe('auth.statusChange', function (response) {
+
+                console.log('FB: auth.statusChange');
+
+                if (response.authResponse) { // user has auth'd your app and is logged into Facebook
+
+                    var counterUndefined = 0;
+                    var counterMarried = 0;
+                    var counterEngaged = 0;
+                    var counterSingle = 0;
+                    var counterRelationship = 0;
+
+                    $("#relationships").html("");
+
+                    // API query to get the user's metadata.
+                    FB.api('/me?fields=id,name,friends.fields(relationship_status),relationship_status', function (response) {
+
+                        $("#name").text(response.name);
+                        $("#profileImage").attr("src", "https://graph.facebook.com/" + response.id + "/picture");
+
+                        //console.log(response);
+
+                        ChangeState(true);
+
+                        var friendCount = response.friends.data.length;
+
+                        $("#relationships").append("<p>You have <span>" + friendCount + "</span> friends.</p>");
+
+                        for (i = 0; i < response.friends.data.length; i++) {
+
+                            var friend = response.friends.data[i];
+
+                            var friendId = friend.id;
+                            var relationship_status = friend.relationship_status
+
+                            if (relationship_status == null)
+                            {
+                                counterUndefined++;
+                                continue;
+                            }
+
+                            switch(relationship_status)
+                            {
+                                case "In a relationship":
+                                    counterRelationship++;
+                                    break;
+                                case "Married":
+                                    counterMarried++;
+                                    break;
+                                case "Single":
+                                    counterSingle++;
+                                    break;
+                                case "Engaged":
+                                    counterEngaged++;
+                                    break;
+                                default:
+                                    alert("Unknown relationship: " + relationship_status);
+                                    break;
+                            }
+                        }
+
+                        $("#relationships").append("<p>There are <span>" + counterUndefined + "</span> of your friends with no defined relationship.</p>");
+                        $("#relationships").append("<p>and <span>" + counterSingle + "</span> of your friends are single.</p>");
+                        $("#relationships").append("<p>There are <span>" + counterRelationship + "</span> in a relationship.</p>");
+                        $("#relationships").append("<p>.. and <span>" + counterEngaged + "</span> are engaged!</p>");
+                        $("#relationships").append("<p>.. and finally, <span>" + counterMarried + "</span> are married.</p>");
+                        $("#relationships").append("<p>That's all your friends, and you are: <span>" + response.relationship_status + "</span></p>");
+                    })
+
+                } else {
+                    // user has not auth'd your app, or is not logged into Facebook
+                    ChangeState(false);
+                }
+            });
+
+            FB.getLoginStatus(function (response) {
+
+                console.log('FB: getLoginStatus');
+
+                if (response.status === 'connected') {
+                    // We don't need to do anything here, the event
+                    // subscribed above will handle whenever the user
+                    // is authenticated.
+                } else if (response.status === 'not_authorized') {
+                    // the user is logged in to Facebook, 
+                    // but has not authenticated your app
+                    console.log("You have not autorized this app.");
+                } else {
+                    // the user isn't logged in to Facebook.
+                    ChangeState(false);
+                }
+            });
+
+        };
+
+    </script>
+
+</head>
+<body>
+
+    <div class="anonymous">
+
+    <h1>Relationships Visualization</h1>
+
+    <p>Click the button to connect using Facebook and see the visualization of your friends' relationships.</p>
+
+    <img id="connect" src="Facebook.png" />
+
+    <p>This web app will visualize the relationships of all your friends. The site does not store any of your private data. All visualizations happens inside the web browser, no data is sent to our servers.</p>
+    
+    </div>
+
+    <div class="authenticated">
+
+        <h1>Welcome!</h1>
+
+        <p><img id="profileImage" />Hi, <span id="name"></span></p>
+
+        <div id="relationships">
+
+        </div>
+
+        <a href="JavaScript:Logout();">Logout</a>
+
+    </div>
+
+    <p>Provided by <a href="http://brain.no/" target="_blank">brain.no</a></p>
+
+</body>
+</html>
